@@ -1,0 +1,9 @@
+.current-user-row {
+  background-color: rgba(33, 150, 243, 0.1); /* لون مميز */
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.current-user-row:hover {
+  background-color: rgba(33, 150, 243, 0.2);
+}

@@ -1,0 +1,44 @@
+/* 🖨️ تنسيق الطباعة الاحترافي */
+@media print {
+  body {
+    font-family: "Cairo", sans-serif;
+    direction: rtl;
+    text-align: right;
+    background: white;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* إخفاء الأزرار والفلاتر */
+  .no-print {
+    display: none !important;
+  }
+
+  /* تنسيق الورقة */
+  @page {
+    size: A4;
+    margin: 1.5cm;
+  }
+
+  paper,
+  .MuiPaper-root {
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  h4,
+  h6 {
+    color: #000 !important;
+  }
+
+  /* الفروع */
+  [border] {
+    border-color: #000 !important;
+  }
+
+  /* إجمالي الكل */
+  [style*="background-color"] {
+    background: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact;
+  }
+}
