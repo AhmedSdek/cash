@@ -17,25 +17,16 @@ import {
 
 const DeliverysList = () => {
   const dispatch = useDispatch();
-
-  // ✅ التعديل الرئيسي: استخدام 'outList' بدلاً من 'list'
-  // واستخدام قيمة افتراضية آمنة في حالة عدم وجود الـ state
   const { outList, loading } = useSelector((state) => state.deliverylist || {});
-
-  // ✅ معالجة أكثر أمانًا لجلب branchId
   const userJson = localStorage.getItem("user");
-  const { branchId } = userJson ? JSON.parse(userJson) : {};
-
+  const user = userJson ? JSON.parse(userJson) : {};
+  const branchId = user?.branchId?._id;
   useEffect(() => {
-    // التأكد من وجود branchId قبل إرسال الـ Thunk
     if (branchId) {
       dispatch(fetchOutDeliveries(branchId));
     }
-    // 💡 يمكن إضافة حالة خطأ هنا إذا لم يتم العثور على branchId
   }, [dispatch, branchId]);
-
   const handleSetAvailable = (deliveryId) => {
-    // 💡 يُفضل وضع "loading state" هنا أو منع الضغط المتعدد
     dispatch(setDeliveryAvailable(deliveryId));
   };
 
@@ -47,8 +38,7 @@ const DeliverysList = () => {
           justifyContent: "center",
           alignItems: "center",
           minHeight: "50vh",
-        }}
-      >
+        }}>
         <CircularProgress />
       </Box>
     );
@@ -63,8 +53,7 @@ const DeliverysList = () => {
           fontWeight: "bold",
           textAlign: "center",
           color: "primary.main",
-        }}
-      >
+        }}>
         Out Deliverys
       </Typography>
 
@@ -81,8 +70,7 @@ const DeliverysList = () => {
               item
               xs={12}
               key={d._id}
-              sx={{ width: "100%", maxWidth: 500 }}
-            >
+              sx={{ width: "100%", maxWidth: 500 }}>
               <Card
                 elevation={3}
                 sx={{
@@ -90,8 +78,7 @@ const DeliverysList = () => {
                   width: "100%",
                   transition: "0.3s",
                   "&:hover": { transform: "translateY(-5px)", boxShadow: 6 },
-                }}
-              >
+                }}>
                 <CardContent sx={{ textAlign: "center" }}>
                   <Typography variant="h6" fontWeight="bold">
                     {d.name}
@@ -112,8 +99,7 @@ const DeliverysList = () => {
                     color="success"
                     size="small"
                     onClick={() => handleSetAvailable(d._id)}
-                    sx={{ borderRadius: 2, width: "100%" }}
-                  >
+                    sx={{ borderRadius: 2, width: "100%" }}>
                     Available
                   </Button>
                 </CardContent>

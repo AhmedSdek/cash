@@ -24,7 +24,7 @@ export const joinBranchRoom = (branchId) => {
   if (branchId && !joinedRooms.has(`branch_${branchId}`)) {
     socket.emit("joinBranch", branchId);
     joinedRooms.add(`branch_${branchId}`);
-    console.log("🏠 Joining branch room:", branchId);
+    // console.log("🏠 Joining branch room:", branchId);
   }
 };
 

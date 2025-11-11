@@ -566,25 +566,46 @@ router.put("/:orderId", requireAuth, async (req, res) => {
 // =================================================================
 // ✅ جلب كل الأوردرات الخاصة بشيفت معين (مهما كانت حالتها)
 // =================================================================
-router.get("/branch-all-orders", requireAuth, async (req, res) => { // 💡 تم تغيير اسم الروت
+router.get("/branch-all-orders", requireAuth, async (req, res) => {
   try {
     const { role, tenantId, branchId: userBranchId } = req.user;
 
-    // 2. 📍 تحديد الفرع المستهدف (إجباري هو فرع المستخدم)
+    const { shiftId: selectedShiftId } = req.query; 
+
     const targetBranchId = userBranchId;
 
     if (!targetBranchId) {
-      // إذا كان المستخدم Admin أو Cashier يجب أن يكون لديه branchId
       return res.status(403).json({ message: "Branch ID not found for the user." });
     }
 
-    // 3. 📝 بناء الفلتر وجلب الأوردرات (بدون فلترة شيفت أو حالة)
+    let finalShiftId = selectedShiftId;
+    console.log(finalShiftId)
+
+    if (finalShiftId === "null") {
+      return res.json([]);
+    }
+
+    if (finalShiftId === "open" || !finalShiftId) {
+
+      const openShift = await Shift.findOne({
+        tenantId,
+        branchId: targetBranchId,
+        status: "OPEN", // شرط أن يكون الشيفت مفتوحاً حالياً
+      }).select('_id');
+
+      if (openShift) {
+        finalShiftId = openShift._id; // نستخدم ID الشيفت المفتوح
+      } else {
+        return res.json([]);
+      }
+    }
+
     const filter = {
       tenantId,
-      branchId: targetBranchId, // إجبار الفلتر على فرع المستخدم الحالي
+      branchId: targetBranchId,
     };
 
-    // 4. تنفيذ الاستعلام مع Populate
+    filter.shiftId = finalShiftId;
     const orders = await Order.find(filter)
       .populate({
         path: "customerId",
@@ -596,7 +617,8 @@ router.get("/branch-all-orders", requireAuth, async (req, res) => { // 💡 تم
       .populate("tenantId")
       .populate("createdBy")
       .populate("zoneId")
-      .sort({ createdAt: -1 }); // 💡 يمكن إضافة ترتيب زمني تنازلي
+      .populate("shiftId")
+      .sort({ createdAt: -1 });
 
     res.json(orders);
   } catch (err) {

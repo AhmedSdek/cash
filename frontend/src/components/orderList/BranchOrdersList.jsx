@@ -1,9 +1,10 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-// ✅ استخدام الـ Thunk الجديد الذي يجلب كل أوردرات الفرع
 import {
   fetchAllBranchOrders,
   clearAllBranchOrders,
+  fetchAllShifts,
+  fetchCurrentShift,
 } from "../../store/shiftSlice";
 import {
   Box,
@@ -17,31 +18,65 @@ import {
   TableCell,
   Paper,
   Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Grid,
 } from "@mui/material";
 
 export default function BranchOrdersList() {
   const dispatch = useDispatch();
 
-  // 1. جلب البيانات من الـ Store
-  // ✅ استخدام الحالة الجديدة allBranchOrders
-  const { allBranchOrders, loading, error } = useSelector(
-    (state) => state.shift
-  );
-  // 💡 افتراض أن بيانات المستخدم (لتحديد الفرع) محفوظة في store.auth.user
+  const [selectedShiftId, setSelectedShiftId] = useState(null);
+
+  const { allBranchOrders, allShifts, loading, error, currentShift } =
+    useSelector((state) => state.shift);
   const user = useSelector((state) => state.auth.user);
 
-  // 2. جلب الأوردرات عند تحميل المكون
   useEffect(() => {
-    // جلب كل الأوردرات للفرع الحالي
-    dispatch(fetchAllBranchOrders());
+    dispatch(fetchAllShifts());
+    dispatch(fetchCurrentShift());
 
-    // تنظيف الحالة عند مغادرة المكون
     return () => {
       dispatch(clearAllBranchOrders());
     };
   }, [dispatch]);
 
-  // 3. عرض حالة التحميل
+  useEffect(() => {
+    if (currentShift !== undefined && selectedShiftId === null) {
+      if (currentShift) {
+        setSelectedShiftId(undefined);
+      } else {
+        setSelectedShiftId(null);
+      }
+    }
+  }, [currentShift, selectedShiftId]);
+
+  useEffect(() => {
+    if (selectedShiftId !== null) {
+      dispatch(fetchAllBranchOrders(selectedShiftId));
+    }
+  }, [dispatch, selectedShiftId]);
+
+  const handleShiftChange = (event) => {
+    const value = event.target.value;
+    setSelectedShiftId(
+      // "open" (الشيفت المفتوح) تُترجم لـ undefined
+      value === "open"
+        ? undefined
+        : // "" (الخيار الافتراضي الفارغ) تُترجم لـ null
+        value === ""
+        ? null
+        : value
+    );
+  };
+
+  // ----------------------------------------------------
+  // حالات العرض
+  // ----------------------------------------------------
+
+  // 💡 انتظار حتى يتم تحديد selectedShiftId لأول مرة (أي حتى يتغير من null)
   if (loading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
@@ -50,32 +85,53 @@ export default function BranchOrdersList() {
     );
   }
 
-  // 4. عرض رسالة الخطأ
   if (error) {
     return (
       <Alert severity="error" sx={{ mt: 2 }}>
-        ❌ حدث خطأ أثناء جلب الأوردرات: {error}
+        حدث خطأ أثناء جلب البيانات: {error}
       </Alert>
     );
   }
 
-  // 5. عرض رسالة لا يوجد بيانات
-  if (allBranchOrders.length === 0) {
+  // إذا لم يكن هناك أوردرات و انتهى التحميل
+  if (allBranchOrders.length === 0 && !loading) {
     return (
-      <Alert severity="info" sx={{ mt: 2 }}>
-        لا توجد أوردرات متاحة حالياً في الفرع ({user?.branchId || "غير معروف"}).
-      </Alert>
+      <Box>
+        <ShiftSelectionControl
+          allShifts={allShifts}
+          currentShift={currentShift}
+          selectedShiftId={selectedShiftId}
+          handleShiftChange={handleShiftChange}
+          userBranchName={user?.branchId?.name}
+        />
+        <Alert severity="info" sx={{ mt: 2 }}>
+          {/* رسالة توضح السياق: إذا كان لا يوجد شيفت مفتوح، نوجه المستخدم للاختيار */}
+          {currentShift === null
+            ? "لا يوجد شيفت مفتوح حالياً. يرجى اختيار شيفت مغلق من القائمة لعرض أوردراته."
+            : `لا توجد أوردرات متاحة حالياً في الفرع (${
+                user?.branchId?.name || "غير معروف"
+              }) للشيفت المحدد.`}
+        </Alert>
+      </Box>
     );
   }
 
-  // 6. المكون الرئيسي لعرض الجدول
   return (
     <Box>
       <Typography variant="h5" mb={3}>
-        📋 جميع الأوردرات لفرع: {user?.branchName || user?.branchId}
+        📋 جميع الأوردرات لفرع: {user?.branchId?.name || "..."}
       </Typography>
 
-      <TableContainer component={Paper}>
+      <ShiftSelectionControl
+        allShifts={allShifts}
+        currentShift={currentShift}
+        selectedShiftId={selectedShiftId}
+        handleShiftChange={handleShiftChange}
+        userBranchName={user?.branchId?.name}
+      />
+
+      {/* 🔴 عرض الجدول */}
+      <TableContainer component={Paper} sx={{ mt: 3 }}>
         <Table stickyHeader>
           <TableHead>
             <TableRow>
@@ -89,19 +145,18 @@ export default function BranchOrdersList() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {allBranchOrders.map((order, index) => (
+            {allBranchOrders.map((order) => (
               <TableRow key={order._id}>
                 <TableCell>{order.orderNumber}</TableCell>
                 <TableCell>{order.type}</TableCell>
-                {/* 💡 لعرض الـ Shift ID أو حالة الشيفت (مغلق/مفتوح) */}
                 <TableCell>
-                  {order.shiftId?.status || order.shiftId || "غير محدد"}
+                  {/* عرض حالة الشيفت */}
+                  {order.shiftId?.status || "غير محدد"}
                 </TableCell>
                 <TableCell>{order.status}</TableCell>
                 <TableCell>
                   **{order.grandTotal?.toFixed(2) || "0.00"} ج.م**
                 </TableCell>
-                {/* 💡 عرض اسم المستخدم الذي أنشأ الأوردر */}
                 <TableCell>{order.createdBy?.name || "غير معروف"}</TableCell>
                 <TableCell>
                   {new Date(order.createdAt).toLocaleString()}
@@ -114,3 +169,70 @@ export default function BranchOrdersList() {
     </Box>
   );
 }
+
+// ---
+// ----------------------------------------------------
+// 🟢 مكون فرعي لأداة اختيار الشيفت (تم التعديل)
+// ----------------------------------------------------
+const ShiftSelectionControl = ({
+  allShifts,
+  currentShift,
+  selectedShiftId,
+  handleShiftChange,
+  userBranchName,
+}) => {
+  const displayValue =
+    selectedShiftId === undefined
+      ? "open"
+      : selectedShiftId === null
+      ? ""
+      : selectedShiftId;
+
+  return (
+    <Box mb={3}>
+      <Grid container spacing={2} alignItems="center">
+        <Grid item xs={12} sm={4}>
+          <FormControl fullWidth sx={{ width: "150px" }} size="small">
+            <InputLabel id="shift-select-label">اختيار الشيفت</InputLabel>
+            <Select
+              labelId="shift-select-label"
+              value={displayValue} // 👈 سيصبح "" عندما لا يوجد شيفت مفتوح
+              label="اختيار الشيفت"
+              onChange={handleShiftChange}>
+              {/* 🆕 الخيار الافتراضي الفارغ */}
+              <MenuItem value={""}>
+                {currentShift
+                  ? "-- اختيار شيفت مغلق --"
+                  : "--- لا يوجد شيفت مفتوح ---"}
+              </MenuItem>
+
+              {/* 🟢 الشيفت المفتوح (يُعرض فقط إذا كان موجوداً) */}
+              {currentShift && (
+                <MenuItem value={"open"}>
+                  🟢 الشيفت المفتوح حالياً (
+                  {new Date(currentShift.openedAt).toLocaleTimeString()})
+                </MenuItem>
+              )}
+
+              {/* 🔴 الشيفتات المغلقة (لم تتغير) */}
+              {allShifts
+                .filter((shift) => shift._id !== currentShift?._id)
+                .map((shift) => (
+                  <MenuItem key={shift._id} value={shift._id}>
+                    {shift.status === "CLOSED" ? "🔴 مُغلق" : "🟡 شيفت قديم"} (
+                    {new Date(shift.openedAt).toLocaleDateString()})
+                  </MenuItem>
+                ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={8}>
+          <Typography variant="body2" color="textSecondary">
+            ملاحظة: إذا لم تختر شيفت محدد، سيتم جلب أوردرات الشيفت المفتوح
+            حالياً لفرع {userBranchName}.
+          </Typography>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+};

@@ -244,7 +244,8 @@ router.post("/login", async (req, res) => {
     const { email, password } = req.body;
 
     // ✅ check user
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).populate("branchId");
+    console.log(user)
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
     // ✅ check if blocked

@@ -114,12 +114,6 @@ export default function UsersList() {
       },
       { field: "role", headerName: "🎭 الدور", flex: 1 },
       {
-        field: "branchName",
-        headerName: "🏢 الفرع",
-        flex: 1,
-        renderCell: ({ row }) => row.branchId?.name || "—",
-      },
-      {
         field: "status",
         headerName: "📌 الحالة",
         flex: 1,
@@ -128,8 +122,7 @@ export default function UsersList() {
             style={{
               color: row.status === "AVAILABLE" ? "green" : "red",
               fontWeight: "bold",
-            }}
-          >
+            }}>
             {row.status}
           </span>
         ),
@@ -139,16 +132,27 @@ export default function UsersList() {
         headerName: "الإجراءات",
         sortable: false,
         flex: 1,
-        renderCell: ({ row }) => (
-          <Stack direction="row" spacing={1}>
-            <IconButton color="primary" onClick={() => handleEdit(row)}>
-              <Edit />
-            </IconButton>
-            <IconButton color="error" onClick={() => handleDelete(row._id)}>
-              <DeleteIcon />
-            </IconButton>
-          </Stack>
-        ),
+        renderCell: ({ row }) => {
+          const isCurrentUser = row._id === user?._id;
+
+          return (
+            <Stack direction="row" spacing={1}>
+              <IconButton color="primary" onClick={() => handleEdit(row)}>
+                <Edit />
+              </IconButton>
+
+              <IconButton
+                color="error"
+                onClick={() => handleDelete(row._id)}
+                disabled={isCurrentUser}
+                title={
+                  isCurrentUser ? "لا يمكن حذف حسابك الحالي" : "حذف المستخدم"
+                }>
+                <DeleteIcon />
+              </IconButton>
+            </Stack>
+          );
+        },
       },
     ],
     [handleEdit, handleDelete, user?._id]

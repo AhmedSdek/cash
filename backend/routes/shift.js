@@ -23,7 +23,6 @@ router.get("/", requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/shifts/current -> جلب الشيفت المفتوح الحالي + أوردرات الدليفري المرتبطة
 // GET /api/shifts/current -> جلب الشيفت المفتوح الحالي + جميع أوردرات الدليفري المرتبطة
 router.get("/current", requireAuth, async (req, res) => {
   try {
@@ -45,10 +44,6 @@ router.get("/current", requireAuth, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
-// ... (بقية الـ Routes تظل كما هي) ...
-
-module.exports = router;
 
 // ----------------------------------------------------
 // PUT /api/shifts/close -> اغلاق الشيفت الحالي
@@ -139,7 +134,8 @@ router.put("/close", requireAuth, async (req, res) => {
 // GET /api/shifts/:id/report -> جلب تقرير الشيفت
 router.get("/:id/report", requireAuth, async (req, res) => {
   try {
-    const shift = await Shift.findById(req.params.id);
+    const shift = await Shift.findById(req.params.id).populate("openedBy", "name phone role")
+      .populate("cashes.userId", "name phone");
     if (!shift) {
       return res.status(404).json({ message: "Shift not found" });
     } // ✅ هنا بيرجع الشيفت كامل زي ما هو متخزن ف الداتابيز

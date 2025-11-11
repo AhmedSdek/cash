@@ -536,8 +536,7 @@ router.get(
   "/branch/:branchId/out-deliveries",
   requireAuth,
   async (req, res) => {
-    // ... (نفس الكود السابق)
-    // ... (نفس الكود السابق)
+
     try {
       const { branchId } = req.params;
 

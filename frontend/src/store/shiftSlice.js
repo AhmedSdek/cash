@@ -30,6 +30,7 @@ export const fetchCurrentShift = createAsyncThunk(
       const res = await axios.get(`${API_URL}/current`, {
         headers: getAuthHeaders(),
       });
+      console.log(res)
       return res.data.shift;
     } catch (err) {
       const message = err.response?.data?.message || err.message;
@@ -84,13 +85,22 @@ export const fetchAllShifts = createAsyncThunk(
   }
 );
 
-// 🟢 جلب كل الأوردرات لفرع المستخدم (الروت الجديد: /branch-all-orders)
+// 🟢 جلب كل الأوردرات لفرع المستخدم (مع دعم فلترة Shift ID)
 export const fetchAllBranchOrders = createAsyncThunk(
   "shift/fetchAllBranchOrders",
-  async (_, thunkAPI) => {
+  async (shiftId, thunkAPI) => {
     try {
-      // لا نحتاج لـ params لأن الفرع يحدد من الـ Token في الـ Backend
-      const res = await axios.get(`${ORDERS_API_URL}/branch-all-orders`, {
+      let url = `${ORDERS_API_URL}/branch-all-orders`;
+      let paramValue = shiftId;
+      if (shiftId === undefined) {
+        paramValue = "open";
+      } else if (shiftId === null) {
+        paramValue = "null";
+      }
+      if (paramValue) {
+        url = `${url}?shiftId=${paramValue}`;
+      }
+      const res = await axios.get(url, {
         headers: getAuthHeaders(),
       });
       return res.data;
